@@ -1,0 +1,7 @@
+tempCodeRunnerFile.cpp
+*.out
+*.exe
+*.exec
+.DS_Store
+Thumbs.db
+main
