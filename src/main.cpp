@@ -154,6 +154,35 @@ void findClosestFreeSpace(ParkingLot* parkingPtr, int* resultRow, int* resultCol
     }
 }
 
+int findVehicleByPlate(ParkingLot* parkingPtr, char* plate) {
+
+    for (int i = 0; i < (*parkingPtr).totalVehicles; i++) {
+        if ((*parkingPtr).vehicles[i].active == true) {
+            if (strcmp((*parkingPtr).vehicles[i].plate, plate) == 0) {
+                return i;
+            }
+        }
+    }
+    return -1;
+}
+
+double calculateCharge(Vehicle* vehiclePtr, time_t exitTime) {
+
+    double totalSeconds = difftime(exitTime, (*vehiclePtr).entryTime);
+    int fullHours = (int)(totalSeconds / 3600);
+
+    double ratePerHour = 0.0;
+    if ((*vehiclePtr).type[0] == 'M') {
+        ratePerHour = RATE_MOTO;
+    }
+    else {
+        ratePerHour = RATE_CAR;
+    }
+
+    double totalCharge = fullHours * ratePerHour;
+    return totalCharge;
+}
+
 void registerEntry(ParkingLot* parkingPtr) {
 
     std::cout << "\nIngreso de vehiculos\n";
@@ -163,10 +192,10 @@ void registerEntry(ParkingLot* parkingPtr) {
         return;
     }
 
-    char plate[6];
+    char plate[7];
     std::cout << "Placa: ";
     std::cin >> plate;
-    plate[5] = '\0';
+    plate[6] = '\0';
 
     char typeInput;
     std::cout << "Tipo (C (Carro)/M (Moto)): ";
@@ -214,6 +243,44 @@ void registerEntry(ParkingLot* parkingPtr) {
     std::cout << "  Tarifa: $" << std::fixed << std::setprecision(3) << rateToShow << "/h\n";
 }
 
+void registerExit(ParkingLot* parkingPtr) {
+
+    std::cout << "\nSalida de vehiculos\n";
+
+    char plate[7];
+    std::cout << "Placa: ";
+    std::cin >> plate;
+    plate[6] = '\0';
+
+    int vehicleIndex = findVehicleByPlate(parkingPtr, plate);
+
+    if (vehicleIndex < 0) {
+        std::cout << "No encontrado.\n";
+        return;
+    }
+
+    Vehicle* vehiclePtr = &(*parkingPtr).vehicles[vehicleIndex];
+    time_t exitTime = time(nullptr);
+    double total = calculateCharge(vehiclePtr, exitTime);
+
+    int parkedRow = (*vehiclePtr).row;
+    int parkedCol = (*vehiclePtr).column;
+    (*parkingPtr).map[parkedRow][parkedCol] = FREE;
+
+    (*vehiclePtr).active = false;
+
+    updateCounters(parkingPtr);
+
+    double totalSeconds = difftime(exitTime, (*vehiclePtr).entryTime);
+    int hoursParked = (int)(totalSeconds / 3600);
+    int minutesParked = (int)((totalSeconds - hoursParked * 3600) / 60);
+
+    std::cout << "Resumen de salida\n";
+    std::cout << "  Placa  : " << (*vehiclePtr).plate << "\n";
+    std::cout << "  Tiempo : " << hoursParked << "h " << minutesParked << "min\n";
+    std::cout << "  TOTAL  : $" << std::fixed << std::setprecision(3) << total << "\n";
+}
+
 int main() {
 
     ParkingLot parking;
@@ -221,6 +288,8 @@ int main() {
 
     showMap(&parking);
     registerEntry(&parking);
+    showMap(&parking);
+    registerExit(&parking);
     showMap(&parking);
 
     return 0;
