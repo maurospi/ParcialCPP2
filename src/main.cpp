@@ -52,6 +52,21 @@ void updateCounters(ParkingLot* parkingPtr) {
     }
 }
 
+void showStats(ParkingLot* parkingPtr) {
+
+    int total = (*parkingPtr).emptySpaces + (*parkingPtr).occupiedSpaces;
+
+    double pct = 0.0;
+    if (total > 0) {
+        pct = ((*parkingPtr).occupiedSpaces * 100.0) / total;
+    }
+
+    std::cout << "  Libres: " << (*parkingPtr).emptySpaces;
+    std::cout << "  Ocupados: " << (*parkingPtr).occupiedSpaces;
+    std::cout << "  Total: " << total;
+    std::cout << "  Ocupacion: " << std::fixed << std::setprecision(1) << pct << "%\n";
+}
+
 void setUpMap(ParkingLot* parkingPtr) {
 
     (*parkingPtr).totalVehicles = 0;
@@ -134,8 +149,7 @@ void showMap(ParkingLot* parkingPtr) {
     }
 
     std::cout << "\n";
-    std::cout << "  Libres: " << (*parkingPtr).emptySpaces;
-    std::cout << "  Ocupados: " << (*parkingPtr).occupiedSpaces << "\n";
+    showStats(parkingPtr);
 }
 
 void findClosestFreeSpace(ParkingLot* parkingPtr, int* resultRow, int* resultCol) {
@@ -170,6 +184,14 @@ double calculateCharge(Vehicle* vehiclePtr, time_t exitTime) {
 
     double totalSeconds = difftime(exitTime, (*vehiclePtr).entryTime);
     int fullHours = (int)(totalSeconds / 3600);
+    int leftover = (int)(totalSeconds) % 3600;
+
+    if (leftover > 0) {
+        fullHours = fullHours + 1;
+    }
+    if (fullHours < 1) {
+        fullHours = 1;
+    }
 
     double ratePerHour = 0.0;
     if ((*vehiclePtr).type[0] == 'M') {
@@ -196,6 +218,12 @@ void registerEntry(ParkingLot* parkingPtr) {
     std::cout << "Placa: ";
     std::cin >> plate;
     plate[6] = '\0';
+
+    int existingIndex = findVehicleByPlate(parkingPtr, plate);
+    if (existingIndex >= 0) {
+        std::cout << "Ya esta adentro.\n";
+        return;
+    }
 
     char typeInput;
     std::cout << "Tipo (C (Carro)/M (Moto)): ";
@@ -228,6 +256,10 @@ void registerEntry(ParkingLot* parkingPtr) {
 
     updateCounters(parkingPtr);
 
+    char timeBuffer[20];
+    struct tm* timeInfo = localtime(&(*parkingPtr).vehicles[newIndex].entryTime);
+    strftime(timeBuffer, sizeof(timeBuffer), "%H:%M:%S", timeInfo);
+
     double rateToShow = 0.0;
     if (typeInput == 'M') {
         rateToShow = RATE_MOTO;
@@ -239,8 +271,46 @@ void registerEntry(ParkingLot* parkingPtr) {
     std::cout << "Resumen de ingreso\n";
     std::cout << "  Placa: " << plate << "\n";
     std::cout << "  Tipo: " << typeArray << "\n";
-    std::cout << "  Espacio: Fila" << spaceRow << " Columna" << spaceCol << "\n";
+    std::cout << "  Espacio: Fila " << spaceRow << " Columna " << spaceCol << "\n";
+    std::cout << "  Hora: " << timeBuffer << "\n";
     std::cout << "  Tarifa: $" << std::fixed << std::setprecision(3) << rateToShow << "/h\n";
+}
+
+void showActiveVehicles(ParkingLot* parkingPtr) {
+
+    std::cout << "\nVehiculos en el parqueadero\n";
+
+    bool foundAny = false;
+    time_t rightNow = time(nullptr);
+
+    for (int i = 0; i < (*parkingPtr).totalVehicles; i++) {
+        Vehicle* vehiclePtr = &(*parkingPtr).vehicles[i];
+        if ((*vehiclePtr).active == false) {
+            continue;
+        }
+        foundAny = true;
+
+        double totalSeconds = difftime(rightNow, (*vehiclePtr).entryTime);
+        int hoursParked = (int)(totalSeconds / 3600);
+        int minutesParked = (int)((totalSeconds - hoursParked * 3600) / 60);
+
+        char timeBuffer[20];
+        struct tm* timeInfo = localtime(&(*vehiclePtr).entryTime);
+        strftime(timeBuffer, sizeof(timeBuffer), "%H:%M:%S", timeInfo);
+
+        double currentDebt = calculateCharge(vehiclePtr, rightNow);
+
+        std::cout << "  " << (*vehiclePtr).plate;
+        std::cout << " | " << (*vehiclePtr).type;
+        std::cout << " | Fila " << (*vehiclePtr).row << " Columna " << (*vehiclePtr).column;
+        std::cout << " | " << timeBuffer;
+        std::cout << " | " << hoursParked << "h " << minutesParked << "m";
+        std::cout << " | $" << std::fixed << std::setprecision(3) << currentDebt << "\n";
+    }
+
+    if (foundAny == false) {
+        std::cout << "  Esta vacio el parqueadero\n";
+    }
 }
 
 void registerExit(ParkingLot* parkingPtr) {
@@ -275,10 +345,19 @@ void registerExit(ParkingLot* parkingPtr) {
     int hoursParked = (int)(totalSeconds / 3600);
     int minutesParked = (int)((totalSeconds - hoursParked * 3600) / 60);
 
+    char entryBuffer[20];
+    char exitBuffer[20];
+    struct tm* entryInfo = localtime(&(*vehiclePtr).entryTime);
+    strftime(entryBuffer, sizeof(entryBuffer), "%H:%M:%S", entryInfo);
+    struct tm* exitInfo = localtime(&exitTime);
+    strftime(exitBuffer, sizeof(exitBuffer), "%H:%M:%S", exitInfo);
+
     std::cout << "Resumen de salida\n";
-    std::cout << "  Placa  : " << (*vehiclePtr).plate << "\n";
-    std::cout << "  Tiempo : " << hoursParked << "h " << minutesParked << "min\n";
-    std::cout << "  TOTAL  : $" << std::fixed << std::setprecision(3) << total << "\n";
+    std::cout << "  Placa: " << (*vehiclePtr).plate << "\n";
+    std::cout << "  Entrada: " << entryBuffer << "\n";
+    std::cout << "  Salida: " << exitBuffer << "\n";
+    std::cout << "  Tiempo: " << hoursParked << "h " << minutesParked << "min\n";
+    std::cout << "  TOTAL: $" << std::fixed << std::setprecision(3) << total << "\n";
 }
 
 int main() {
@@ -288,8 +367,10 @@ int main() {
 
     showMap(&parking);
     registerEntry(&parking);
+    showActiveVehicles(&parking);
     showMap(&parking);
     registerExit(&parking);
+    showActiveVehicles(&parking);
     showMap(&parking);
 
     return 0;
