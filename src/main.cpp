@@ -3,6 +3,7 @@
 #include <string>
 #include <cstring>
 #include <ctime>
+#include <fstream>
 
 const int ROWS = 18;
 const int COLUMNS = 18;
@@ -360,18 +361,77 @@ void registerExit(ParkingLot* parkingPtr) {
     std::cout << "  TOTAL: $" << std::fixed << std::setprecision(3) << total << "\n";
 }
 
-int main() {
+void saveToFile(Vehicle* vehiclePtr, double total, time_t exitTime) {
+ 
+    std::ofstream histFile("historial.txt", std::ios::app);
+ 
+    if (histFile.is_open() == false) {
+        std::cout << "No se pudo guardar.\n";
+        return;
+    }
+ 
+    char entryBuffer[20];
+    char exitBuffer[20];
+    struct tm* entryInfo = localtime(&(*vehiclePtr).entryTime);
+    strftime(entryBuffer, sizeof(entryBuffer), "%Y-%m-%d %H:%M:%S", entryInfo);
+    struct tm* exitInfo = localtime(&exitTime);
+    strftime(exitBuffer, sizeof(exitBuffer), "%Y-%m-%d %H:%M:%S", exitInfo);
+ 
+    histFile << "PLACA=" << (*vehiclePtr).plate;
+    histFile << " TIPO=" << (*vehiclePtr).type;
+    histFile << " ENTRADA=" << entryBuffer;
+    histFile << " SALIDA=" << exitBuffer;
+    histFile << " TOTAL=$" << std::fixed << std::setprecision(3) << total;
+    histFile << "\n";
+ 
+    histFile.close();
+}
 
+void showMenu() {
+    std::cout << "\nMenu\n";
+    std::cout << "1 Mapa\n";
+    std::cout << "2 Ingreso\n";
+    std::cout << "3 Salida\n";
+    std::cout << "4 Activos\n";
+    std::cout << "5 Informacion del parqueadero\n";
+    std::cout << "0 Salir\n";
+}
+ 
+int main() {
+ 
     ParkingLot parking;
     setUpMap(&parking);
-
-    showMap(&parking);
-    registerEntry(&parking);
-    showActiveVehicles(&parking);
-    showMap(&parking);
-    registerExit(&parking);
-    showActiveVehicles(&parking);
-    showMap(&parking);
-
+ 
+    int option;
+ 
+    do {
+        showMenu();
+        std::cout << "Opcion: ";
+        std::cin >> option;
+ 
+        if (option == 1) {
+            showMap(&parking);
+        }
+        else if (option == 2) {
+            registerEntry(&parking);
+        }
+        else if (option == 3) {
+            registerExit(&parking);
+        }
+        else if (option == 4) {
+            showActiveVehicles(&parking);
+        }
+        else if (option == 5) {
+            showStats(&parking);
+        }
+        else if (option == 0) {
+            std::cout << "Saliendo del programa\n";
+        }
+        else {
+            std::cout << "Opcion invalida.\n";
+        }
+ 
+    } while (option != 0);
+ 
     return 0;
 }
