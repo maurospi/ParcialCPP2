@@ -18,6 +18,24 @@ const std::string BUSY = "Ocupado";
 const std::string ENTER = "Entrada";
 const std::string EXIT_PT = "Salida";
 
+// =====================================================================
+// SECCION DE COLORES - hecha con ayuda de IA (Claude)
+// Yo no conocia como poner colores en la terminal, asi que le pedi a la
+// IA que me explicara. Son "codigos ANSI": se imprime una secuencia
+// especial (\033[..m) antes del texto para cambiar el color, y despues
+// se imprime \033[0m para volver al color normal.
+// Si se ven raros en la consola (tipo [32m), es porque la terminal
+// no soporta colores (por ejemplo la consola vieja de Windows).
+// =====================================================================
+const std::string COLOR_RESET   = "\033[0m";
+const std::string COLOR_RED     = "\033[31m";
+const std::string COLOR_GREEN   = "\033[32m";
+const std::string COLOR_YELLOW  = "\033[33m";
+const std::string COLOR_MAGENTA = "\033[35m";
+const std::string COLOR_CYAN    = "\033[36m";
+const std::string COLOR_GRAY    = "\033[90m";
+// =====================================================================
+
 struct Vehicle {
     char plate[7];
     char type[2];
@@ -144,7 +162,27 @@ void showMap(ParkingLot* parkingPtr) {
         for (int col = 0; col < COLUMNS; col++) {
             std::string cell = (*parkingPtr).map[row][col];
             std::string display = cell.substr(0, 3);
-            std::cout << display << "| ";
+            std::string color = COLOR_RESET;
+            if (cell == FREE) {
+                color = COLOR_GREEN;
+            }
+            else if (cell == BUSY) {
+                color = COLOR_RED;
+            }
+            else if (cell == WALL) {
+                color = COLOR_GRAY;
+            }
+            else if (cell == ROAD) {
+                color = COLOR_YELLOW;
+            }
+            else if (cell == ENTER) {
+                color = COLOR_CYAN;
+            }
+            else if (cell == EXIT_PT) {
+                color = COLOR_MAGENTA;
+            }
+ 
+            std::cout << color << display << COLOR_RESET << "| ";
         }
         std::cout << "\n";
     }
