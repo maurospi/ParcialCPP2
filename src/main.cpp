@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <string>
+#include <cstring>
 #include <ctime>
 
 const int ROWS = 18;
@@ -33,11 +34,33 @@ struct ParkingLot {
     int occupiedSpaces;
 };
 
+void updateCounters(ParkingLot* parkingPtr) {
+
+    (*parkingPtr).emptySpaces = 0;
+    (*parkingPtr).occupiedSpaces = 0;
+
+    for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLUMNS; col++) {
+            std::string cell = (*parkingPtr).map[row][col];
+            if (cell == FREE) {
+                (*parkingPtr).emptySpaces = (*parkingPtr).emptySpaces + 1;
+            }
+            if (cell == BUSY) {
+                (*parkingPtr).occupiedSpaces = (*parkingPtr).occupiedSpaces + 1;
+            }
+        }
+    }
+}
+
 void setUpMap(ParkingLot* parkingPtr) {
 
     (*parkingPtr).totalVehicles = 0;
     (*parkingPtr).emptySpaces = 0;
     (*parkingPtr).occupiedSpaces = 0;
+
+    for (int i = 0; i < MAX_VEHICLES; i++) {
+        (*parkingPtr).vehicles[i].active = false;
+    }
 
     for (int row = 0; row < ROWS; row++) {
         for (int col = 0; col < COLUMNS; col++) {
@@ -92,6 +115,8 @@ void setUpMap(ParkingLot* parkingPtr) {
     (*parkingPtr).map[0][1] = ENTER;
     (*parkingPtr).map[ROWS - 1][COLUMNS - 2] = EXIT_PT;
     (*parkingPtr).map[1][1] = ROAD;
+
+    updateCounters(parkingPtr);
 }
 
 void showMap(ParkingLot* parkingPtr) {
@@ -109,12 +134,93 @@ void showMap(ParkingLot* parkingPtr) {
     }
 
     std::cout << "\n";
+    std::cout << "  Libres: " << (*parkingPtr).emptySpaces;
+    std::cout << "  Ocupados: " << (*parkingPtr).occupiedSpaces << "\n";
+}
+
+void findClosestFreeSpace(ParkingLot* parkingPtr, int* resultRow, int* resultCol) {
+
+    *resultRow = -1;
+    *resultCol = -1;
+
+    for (int row = 0; row < ROWS; row++) {
+        for (int col = 0; col < COLUMNS; col++) {
+            if ((*parkingPtr).map[row][col] == FREE) {
+                *resultRow = row;
+                *resultCol = col;
+                return;
+            }
+        }
+    }
+}
+
+void registerEntry(ParkingLot* parkingPtr) {
+
+    std::cout << "\nIngreso de vehiculos\n";
+
+    if ((*parkingPtr).emptySpaces == 0) {
+        std::cout << "Parqueadero lleno.\n";
+        return;
+    }
+
+    char plate[6];
+    std::cout << "Placa: ";
+    std::cin >> plate;
+    plate[5] = '\0';
+
+    char typeInput;
+    std::cout << "Tipo (C (Carro)/M (Moto)): ";
+    std::cin >> typeInput;
+
+    char typeArray[2];
+    typeArray[0] = typeInput;
+    typeArray[1] = '\0';
+
+    int spaceRow = -1;
+    int spaceCol = -1;
+    findClosestFreeSpace(parkingPtr, &spaceRow, &spaceCol);
+
+    if (spaceRow == -1) {
+        std::cout << "Sin espacio disponible.\n";
+        return;
+    }
+
+    (*parkingPtr).map[spaceRow][spaceCol] = BUSY;
+
+    int newIndex = (*parkingPtr).totalVehicles;
+    strcpy((*parkingPtr).vehicles[newIndex].plate, plate);
+    strcpy((*parkingPtr).vehicles[newIndex].type, typeArray);
+    (*parkingPtr).vehicles[newIndex].entryTime = time(nullptr);
+    (*parkingPtr).vehicles[newIndex].row = spaceRow;
+    (*parkingPtr).vehicles[newIndex].column = spaceCol;
+    (*parkingPtr).vehicles[newIndex].active = true;
+
+    (*parkingPtr).totalVehicles = (*parkingPtr).totalVehicles + 1;
+
+    updateCounters(parkingPtr);
+
+    double rateToShow = 0.0;
+    if (typeInput == 'M') {
+        rateToShow = RATE_MOTO;
+    }
+    else {
+        rateToShow = RATE_CAR;
+    }
+
+    std::cout << "Resumen de ingreso\n";
+    std::cout << "  Placa: " << plate << "\n";
+    std::cout << "  Tipo: " << typeArray << "\n";
+    std::cout << "  Espacio: Fila" << spaceRow << " Columna" << spaceCol << "\n";
+    std::cout << "  Tarifa: $" << std::fixed << std::setprecision(3) << rateToShow << "/h\n";
 }
 
 int main() {
 
     ParkingLot parking;
     setUpMap(&parking);
+
+    showMap(&parking);
+    registerEntry(&parking);
     showMap(&parking);
 
     return 0;
