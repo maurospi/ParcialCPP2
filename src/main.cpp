@@ -53,6 +53,59 @@ struct ParkingLot {
     int occupiedSpaces;
 };
 
+void updateCounters(ParkingLot* parkingPtr);
+void showStats(ParkingLot* parkingPtr);
+void setUpMap(ParkingLot* parkingPtr);
+void showMap(ParkingLot* parkingPtr);
+void findClosestFreeSpace(ParkingLot* parkingPtr, int* resultRow, int* resultCol);
+int findVehicleByPlate(ParkingLot* parkingPtr, char* plate);
+double calculateCharge(Vehicle* vehiclePtr, time_t exitTime);
+void saveToFile(Vehicle* vehiclePtr, double total, time_t exitTime);
+void registerEntry(ParkingLot* parkingPtr);
+void showActiveVehicles(ParkingLot* parkingPtr);
+void registerExit(ParkingLot* parkingPtr);
+void showVehicleInfo(ParkingLot* parkingPtr);
+void showMenu();
+
+int main() {
+ 
+    ParkingLot parking;
+    setUpMap(&parking);
+ 
+    int option;
+ 
+    do {
+        showMenu();
+        std::cout << "Opcion: ";
+        std::cin >> option;
+ 
+        if (option == 1) {
+            showMap(&parking);
+        }
+        else if (option == 2) {
+            registerEntry(&parking);
+        }
+        else if (option == 3) {
+            registerExit(&parking);
+        }
+        else if (option == 4) {
+            showActiveVehicles(&parking);
+        }
+        else if (option == 5) {
+            showStats(&parking);
+        }
+        else if (option == 0) {
+            std::cout << "Saliendo del programa\n";
+        }
+        else {
+            std::cout << "Opcion invalida.\n";
+        }
+ 
+    } while (option != 0);
+ 
+    return 0;
+}
+
 void updateCounters(ParkingLot* parkingPtr) {
 
     (*parkingPtr).emptySpaces = 0;
@@ -154,14 +207,23 @@ void setUpMap(ParkingLot* parkingPtr) {
 }
 
 void showMap(ParkingLot* parkingPtr) {
-
-    std::cout << "\n";
-
+ 
+    std::cout << "\n      ";
+    for (int col = 0; col < COLUMNS; col++) {
+        std::cout << std::setw(4) << col;
+    }
+    std::cout << "\n    +";
+    for (int col = 0; col < COLUMNS; col++) {
+        std::cout << "----";
+    }
+    std::cout << "+\n";
+ 
     for (int row = 0; row < ROWS; row++) {
-        std::cout << " ";
+        std::cout << std::setw(3) << row << " |";
         for (int col = 0; col < COLUMNS; col++) {
             std::string cell = (*parkingPtr).map[row][col];
             std::string display = cell.substr(0, 3);
+ 
             std::string color = COLOR_RESET;
             if (cell == FREE) {
                 color = COLOR_GREEN;
@@ -182,26 +244,45 @@ void showMap(ParkingLot* parkingPtr) {
                 color = COLOR_MAGENTA;
             }
  
-            std::cout << color << display << COLOR_RESET << "| ";
+            std::cout << color << std::setw(3) << display << COLOR_RESET << " ";
         }
-        std::cout << "\n";
+        std::cout << "|\n";
     }
-
-    std::cout << "\n";
+ 
+    std::cout << "    +";
+    for (int col = 0; col < COLUMNS; col++) {
+        std::cout << "----";
+    }
+    std::cout << "+\n";
+ 
     showStats(parkingPtr);
 }
 
 void findClosestFreeSpace(ParkingLot* parkingPtr, int* resultRow, int* resultCol) {
-
+ 
+    int closestDistance = 9999;
     *resultRow = -1;
     *resultCol = -1;
-
+ 
     for (int row = 0; row < ROWS; row++) {
         for (int col = 0; col < COLUMNS; col++) {
-            if ((*parkingPtr).map[row][col] == FREE) {
-                *resultRow = row;
-                *resultCol = col;
-                return;
+            std::string cell = (*parkingPtr).map[row][col];
+            if (cell == FREE) {
+                // -----------------------------------------------------
+                // CALCULO DE DISTANCIA - hecho con ayuda de IA (Claude)
+                // Yo solo sabia devolver el primer libre que encontraba,
+                // pero la IA me explico como medir "distancia" entre la
+                // entrada y un espacio sumando las filas y las columnas
+                // (distancia Manhattan). Como la entrada esta en fila 0
+                // columna 1, sumo la fila mas el |col - 1|. El abs() es
+                // para que no quede negativo si la columna es menor a 1.
+                // -----------------------------------------------------
+                int distanceFromEntry = row + abs(col - 1);
+                if (distanceFromEntry < closestDistance) {
+                    closestDistance = distanceFromEntry;
+                    *resultRow = row;
+                    *resultCol = col;
+                }
             }
         }
     }
@@ -433,43 +514,4 @@ void showMenu() {
     std::cout << "4 Activos\n";
     std::cout << "5 Informacion del parqueadero\n";
     std::cout << "0 Salir\n";
-}
- 
-int main() {
- 
-    ParkingLot parking;
-    setUpMap(&parking);
- 
-    int option;
- 
-    do {
-        showMenu();
-        std::cout << "Opcion: ";
-        std::cin >> option;
- 
-        if (option == 1) {
-            showMap(&parking);
-        }
-        else if (option == 2) {
-            registerEntry(&parking);
-        }
-        else if (option == 3) {
-            registerExit(&parking);
-        }
-        else if (option == 4) {
-            showActiveVehicles(&parking);
-        }
-        else if (option == 5) {
-            showStats(&parking);
-        }
-        else if (option == 0) {
-            std::cout << "Saliendo del programa\n";
-        }
-        else {
-            std::cout << "Opcion invalida.\n";
-        }
- 
-    } while (option != 0);
- 
-    return 0;
 }
