@@ -453,6 +453,8 @@ void registerExit(ParkingLot* parkingPtr) {
     time_t exitTime = time(nullptr);
     double total = calculateCharge(vehiclePtr, exitTime);
 
+    saveToFile(vehiclePtr, total, exitTime);
+
     int parkedRow = (*vehiclePtr).row;
     int parkedCol = (*vehiclePtr).column;
     (*parkingPtr).map[parkedRow][parkedCol] = FREE;
